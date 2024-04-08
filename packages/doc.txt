@@ -1,0 +1,81 @@
+--------------------Deployment----------------------
+here is some of the requirement we need to follow
+1- want to deploy each microfrontend independently(including the container)
+2- location of child app remoteEntry.js files must be known at built time
+3- many frontend deployment solutions assume you are deploying a single project-we need something that can handle multiples different ones
+4- probably need a CI/CD pipeline of some sort
+5- at present, the remoteEntry.js file name is fixed! Need to think about caching issue.
+
+
+
+
+----explaination of above points-----
+We've only got the absolute beginnings of our container and marketing projects done, and we've not even began working on our auth or dashboard.
+Nonetheless, I want to start thinking about deploying our application right away. The reason for this is that we're gonna have a lot
+of different problems start to come up, that are going to impact how we develop further parts of our application
+once we see some challenges that start to arise as our app gets deployed. So with that in mind, even though we've only
+got a little bit of work done on the project, we're still gonna start the deployment process. So, to get started, I first wanna lay
+out a couple of high level notes and big requirements we have around our deployment process.
+So the first big hard requirement that we're gonna have, is that we must be able to deploy each microphone end independently,
+and that also includes the container. So remember the underlying assumption here, is that we're gonna have multiple different teams
+working at some company on some overall product. Each team is responsible for a different sub-project.
+Each of these different teams might be adding a new features at completely different rates. And as each team adds in a new feature,
+they might want to deploy their application. And they will want you to deploy their app without having to worry about
+some other team finishing up their features. So we need to make sure that as we start to change each sub-project
+we can deploy each one by themselves. The next big thing we need to be aware of, and this is gonna seem like a very,
+very specific technical detail, but it turns out that this is actually gonna give us a little bit of a headache.
+So the location of each child app remote entry file has to be known at build time when we are deploying our container.
+Let me make sure it's just really clear what I mean by that. Okay, so remember, when we are running our app in production
+or even in development for that matter, we're eventually going to load up a main dot js file coming out of our containers Webpac build process
+into the browser. Remember, we don't actually have a main JS file inside of our code editor.
+It is after our code gets processed by Webpac that we get a main.js file, and that's what actually gets loaded up in the browser.
+When that gets loaded into the browser, at some point in time, our application is gonna decide that it needs to load up some code from
+the marketing application. And at that point in time, we're gonna make a follow up request over to our marketing application
+and get the remoteEntry.js file. And that file is gonna have some instructions on how we can load up all the code we need
+from the marketing sub-project. So the main.js file essentially, needs to know exactly what URL to go to,
+to get that remote entry file. And what's more that has to be known at build time or essentially when we are taking all of the files out
+of our container, processing them with Webpac and then spitting out that main.js file. It is when we are building our application
+that we need to know exactly what the URL is gonna be for all those different remote entry files. When main.js is running inside the browser,
+there's no outside api, there's no kind of file manifest, there's no kind of magic way that our application
+can figure out where those remote entry files are. So they have be known when we are building up our project.
+Now, just to make sure this is super clear, we can even see this in action, running our project in development right now
+if we open up our browser. So inside the browser at local host 8080, we can look at our network request tab,
+filter by JavaScript requests, and find the main.js file. So again, this is coming out of our container project.
+Inside of here, you can do a search with command or control F, and look for, "remote entry."
+So inside of here, you'll notice we've got the exact URL of the remote entry file right there for our marketing project.
+That's just a comment, but... if you kind of advance the search forward a little bit, you're gonna see inside of the actual code right here
+we have a very direct reference to where to go to get that remote entry.js file. So not only do we need to know that URL at build time
+but we also need to somehow make that URL available to our container config webpack config stuff. So right now, inside of our dev file
+remember that's where we specify that url. So we essentially, when we build up our Webpack production file, we need to substitute out
+this string right here, with wherever to find the production version of our marketing remote entry file.
+Okay, so I know this bullet point is a little bit specific but I just wanna point out that this might be a little bit of a challenge
+or at least something we really need to think about. All right, next big challenge. There are many different ways
+of deploying a front end application. You can use very easy to use services such as now.sh, you could use Heroku,
+you can use... what else is there? Versel these days? There's a lot of different options. What a lot of these different options are
+kind of assuming is that you are building up one single project and that's it. And you're gonna take the output of that one single project
+and deploy it to some domain, and that's all there is. That's not what we need. We need a service that will allow us to take the output
+of many different webpac build processes, and somehow deploy all those and deploy each of them separately.
+So we need to make sure that whatever solution we pick is gonna work with our very specific requirements
+of having multiple different projects. All right, next one. Now remember, in all this discussion around micro front ends,
+we're really taking kinda the idea here that we might be working with multiple different teams,
+possibly at a large company. So, if you've never worked at a large company before, it is pretty rare that you're ever going to
+deploy your application by just running some command on your personal laptop, and having that directly
+deploy files to some production environment. Instead, it's way more common for you to kind of
+queue up a process or have some outside process do the deployment for you. So in this course, we're not gonna do the easy way out.
+We're not just gonna deploy stuff directly off our computer to some production environment.
+Instead, I'm gonna give you a real production workflow that you can use at a real company,
+with multiple different teams working on the same code base. So, we're not gonna take a shortcut here,
+we're gonna go through a real process and understand how we can kinda work with multiple teams
+to eventually deploy our stuff in some reasonable way. All right. And the last one, and this kind of relates
+to a earlier note here around the remote entry file. Right now, the remote entry file name is fixed.
+In other words, it is always remoteEntry.js. So we need to think about some caching issues around this.
+If caching issues here doesn't make sense, don't worry, we're gonna go into great detail on that.
+In addition, I say "at present" here, I mean "at present" in terms of the Webpac module federation plugin.
+There is work being done to make sure that we can have a dynamic name for the remote entry file, but that's not yet complete.
+So the requirement with the current version of the Webpac module Federation plugin, is that we do have to have a fixed name.
+So when I say, "at present" here, in other words I don't mean to say that you and I are gonna figure out a way to change that.
+We are always gonna have a named file of remoteEntry.js And that might change at some point in time in the future.
+There might be a way of getting around that, but right now we have to have a file with that name.
+So we need to think about some caching issues around that. And again, we'll talk about exactly what I mean
+by caching issues, if that doesn't make any sense. All right, so those are our big requirements.
+So now that we understand some really big things we need to consider here as we start to deploy our application;
